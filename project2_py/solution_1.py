@@ -206,13 +206,13 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad):
     """
     BFGS (Algorithm 6.6 from textbook) with Armijo backtracking. 
     We used this algorithm in Project 1 but it has some modifications:
-      - respects local sub-budget `max_evals` AND the global `n`
-      - returns the FINAL iterate, not the lowest-f_local iterate (outer AL
-        tracks best feasible point itself; f_local is the AL whose minimum
-        is generally NOT the best feasible point of the original problem)
-      - computes real f(x0) instead of f_val=inf, since the latter auto-accepts
-        any first step including overshoots that BFGS can't recover from
-        (matters on Rosenbrock-like surfaces).
+    - respects local sub-budget `max_evals` AND the global `n`
+    - returns the FINAL iterate, not the lowest-f_local iterate (outer AL
+    tracks best feasible point itself; f_local is the AL whose minimum
+    is generally NOT the best feasible point of the original problem)
+    - computes real f(x0) instead of f_val=inf, since the latter auto-accepts
+    any first step including overshoots that BFGS can't recover from
+    (matters on Rosenbrock-like surfaces).
     """
     m = len(x0)
     x = x0.copy()
