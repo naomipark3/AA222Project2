@@ -31,7 +31,8 @@ def plot_problem(test_class, name, seeds, levels):
 
     fig, ax = plt.subplots(figsize=(6, 6))
 
-    #Shade the infeasible region (where max c(x) > 0) in light gray.
+    #**Shade the infeasible region (where max c(x) > 0) in light gray. Project handout specifies
+    #to plot the FEASIBLE region (c(x) \leq 0) on top of a contour plot
     ax.contourf(X, Y, C, levels=[0.0, C.max() + 1.0], colors=['lightgray'], alpha=0.5)
 
     #Constraint boundary as a thin line.
@@ -52,9 +53,9 @@ def plot_problem(test_class, name, seeds, levels):
         path = np.array(hist['path'])
         ax.plot(path[:, 0], path[:, 1], '-', color=col, linewidth=1.2)
         ax.plot(path[0, 0], path[0, 1], 'o', color=col, markersize=6,
-                markerfacecolor='white', markeredgewidth=1.2)
+                markerfacecolor='white', markeredgewidth=1.2) #start
         ax.plot(path[-1, 0], path[-1, 1], 'x', color=col, markersize=8,
-                markeredgewidth=1.5)
+                markeredgewidth=1.5) #finish
 
     ax.set_xlim(-3, 3)
     ax.set_ylim(-3, 3)
@@ -62,6 +63,18 @@ def plot_problem(test_class, name, seeds, levels):
     ax.set_ylabel(r'$x_2$')
     ax.set_title(f'{name}: BFGS with Augmented Lagrangian')
     ax.set_aspect('equal')
+    #Legend showing start (circle) and finish (x)
+    ax.plot([], [], 'o', color='black', markerfacecolor='white',
+            markeredgewidth=1.2, label='Start')
+    ax.plot([], [], 'x', color='black',
+            markeredgewidth=1.5, label='Finish')
+    ax.plot([], [], 's', color='lightgray', alpha=0.5,
+            label=r'$c(x) > 0$')
+    #Add initial condition paths (C0, C1, C2) to the legend
+    ax.plot([], [], '-', color='C0', linewidth=1.2, label='initial condition 1')
+    ax.plot([], [], '-', color='C1', linewidth=1.2, label='initial condition 2')
+    ax.plot([], [], '-', color='C2', linewidth=1.2, label='initial condition 3')
+    ax.legend()
     fig.tight_layout()
     plt.show()
     return fig
