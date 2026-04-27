@@ -1,6 +1,6 @@
 import numpy as np
 
-def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad):
+def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad, step_callback=None):
     """
     BFGS (Algorithm 6.6 from textbook) with Armijo backtracking. 
     We used this algorithm in Project 1 but it has some modifications:
@@ -90,6 +90,9 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad):
         x = x_new
         f_val = f_new
         grad = grad_new
+
+        if step_callback is not None:
+            step_callback(x)
  
     return x
 
