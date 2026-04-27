@@ -13,10 +13,10 @@ Note: Do not import any other modules here.
         not imported here (e.g. for your plotting code).
 '''
 import numpy as np
-from project2_py.solution_1 import algo_1
+from project2_py.solution_algos import algo_1, algo_2
 
 def optimize(f, g, c, x0, n, count, prob):
     x_best = x0
 
-    x_best = algo_1(f, g, c, x0, n, count, prob)
+    x_best = algo_1(f, g, c, x0, n, count, prob) #call solution algorithm (I wrote this as a helper method for cleanliness)
     return x_best
