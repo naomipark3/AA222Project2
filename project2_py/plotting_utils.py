@@ -190,3 +190,157 @@ def _empty_history(x, f, c):
         'rho': [],
         'lam': [],
     }
+
+def optimize_qp_with_history(f, g, c, x0, n, count, prob):
+    """
+    Same Quadratic Penalty + BFGS as project2_py.qp.optimize_qp, but returns
+    (x_best, history) with the same dict structure as optimize_with_history
+    so the same plotting code works for both algorithms. The 'lam' field
+    stays empty since QP has no multiplier mechanism.
+    Note: f and c are evaluated at every recorded step for plotting purposes.
+    Caller should use `problem.nolimit()` to disable the eval cap.
+    """
+    x = np.array(x0, dtype=float).copy()
+    m = len(x)
+ 
+    if count() + 1 > n:
+        return x, _empty_history(x, f, c)
+    c_x = np.atleast_1d(c(x))
+    p = len(c_x)
+ 
+    if count() + 1 > n:
+        return x, _empty_history(x, f, c)
+    f_x = f(x)
+ 
+    path = [x.copy()]
+    f_hist = [f_x]
+    viol_hist = [float(np.max(c_x))]
+    outer_starts = []
+    rho_hist = []
+    lam_hist = []  #empty for QP (no multipliers)
+ 
+    margin = 1e-5
+ 
+    x_best_feas = None
+    f_best_feas = np.inf
+    x_least_viol = x.copy()
+    viol_least = float(np.max(c_x))
+    if viol_least <= 0.0:
+        x_best_feas = x.copy()
+        f_best_feas = f_x
+ 
+    rho = 1.0
+    rho_growth = 10.0  #grow faster than AL's 5x because QP needs rho -> inf
+    rho_max = 1e10
+    max_outer = 12
+    fd_h = 1e-6
+    eval_cost_per_grad = 3 + m
+ 
+    x_prev = x.copy()
+ 
+    def step_callback(x_new):
+        path.append(x_new.copy())
+        f_hist.append(float(f(x_new)))
+        viol_hist.append(float(np.max(np.atleast_1d(c(x_new)))))
+ 
+    for outer in range(max_outer):
+        remaining = n - count()
+        outers_left = max_outer - outer
+        if remaining < eval_cost_per_grad + 4:
+            break
+        if np.isinf(remaining):
+            budget = 10000
+        else:
+            budget = max(remaining // outers_left, int(remaining * 0.40))
+            budget = min(budget, remaining - 4)
+ 
+        outer_starts.append(len(path) - 1)
+        rho_hist.append(rho)
+ 
+        rho_local = rho
+ 
+        def f_QP(x_in, _rho=rho_local):
+            f_val = f(x_in)
+            c_val = np.atleast_1d(c(x_in)) + margin
+            psi = np.maximum(0.0, c_val)
+            return f_val + 0.5 * _rho * float(np.sum(psi * psi))
+ 
+        def g_QP(x_in, _rho=rho_local):
+            grad_f = g(x_in)
+            c_val = np.atleast_1d(c(x_in)) + margin
+            mults = _rho * np.maximum(0.0, c_val)  #no lambda term
+            if not np.any(mults > 0.0):
+                return grad_f
+            J_T_mults = np.zeros(m)
+            for j in range(m):
+                if count() + 1 > n:
+                    return grad_f + J_T_mults
+                e = np.zeros(m)
+                e[j] = fd_h
+                c_plus = np.atleast_1d(c(x_in + e)) + margin
+                J_T_mults[j] = float(np.dot(mults, c_plus - c_val)) / fd_h
+            return grad_f + J_T_mults
+ 
+        x = bfgs_helper(f_QP, g_QP, x, n, count, budget, eval_cost_per_grad,
+                       step_callback=step_callback)
+ 
+        if count() + 1 > n:
+            break
+        c_x = np.atleast_1d(c(x))
+        viol_actual = float(np.max(c_x))
+ 
+        if count() + 1 > n:
+            break
+        f_x = f(x)
+ 
+        if viol_actual <= 0.0 and f_x < f_best_feas:
+            x_best_feas = x.copy()
+            f_best_feas = f_x
+        if viol_actual < viol_least:
+            x_least_viol = x.copy()
+            viol_least = viol_actual
+ 
+        #Always grow rho, as QP has no multiplier mechanism, only path to convergence is rho -> inf
+        rho = min(rho * rho_growth, rho_max)
+ 
+        progress = float(np.linalg.norm(x - x_prev))
+        if progress < 1e-7 and viol_actual <= 0.0 and outer >= 2:
+            break
+        x_prev = x.copy()
+ 
+    #Polish step (recorded if it moves x)
+    polish_band = 10 * margin
+    polish_target = 5 * margin
+    polish_max_iter = 8
+    candidate = x_best_feas if x_best_feas is not None else x_least_viol
+    if count() + (m + 2) * polish_max_iter < n:
+        candidate = _polish_inward(candidate, c, count, n, m, fd_h,
+                                   polish_band, polish_target, polish_max_iter)
+        if not np.allclose(candidate, path[-1]):
+            path.append(candidate.copy())
+            f_hist.append(float(f(candidate)))
+            viol_hist.append(float(np.max(np.atleast_1d(c(candidate)))))
+ 
+    if count() + 1 <= n:
+        c_final = np.atleast_1d(c(candidate))
+        viol_final = float(np.max(c_final))
+        if viol_final <= 0.0 and count() + 1 <= n:
+            f_final = f(candidate)
+            if f_final < f_best_feas:
+                x_best = candidate
+            else:
+                x_best = x_best_feas if x_best_feas is not None else x_least_viol
+        else:
+            x_best = x_best_feas if x_best_feas is not None else x_least_viol
+    else:
+        x_best = x_best_feas if x_best_feas is not None else x_least_viol
+ 
+    history = {
+        'path': path,
+        'f': f_hist,
+        'viol': viol_hist,
+        'outer_starts': outer_starts,
+        'rho': rho_hist,
+        'lam': lam_hist,
+    }
+    return x_best, history
