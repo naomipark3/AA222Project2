@@ -11,12 +11,12 @@ def optimize_with_history(f, g, c, x0, n, count, prob):
     """
     Same Augmented Lagrangian + BFGS as project2_py.optimize, but returns
     (x_best, history) where history is a dict:
-        'path'        : list of np.ndarray, x at each accepted iterate (incl. x0)
-        'f'           : list of float, f(x) at each path point (true f, not L_A)
-        'viol'        : list of float, max(c(x)) at each path point
+        'path': list of np.ndarray, x at each accepted iterate (incl. x0)
+        'f': list of float, f(x) at each path point (true f, not L_A)
+        'viol': list of float, max(c(x)) at each path point
         'outer_starts': list of int, indices into path marking start of each outer iter
-        'rho'         : list of float, value of rho at each outer iter
-        'lam'         : list of np.ndarray, multipliers at each outer iter
+        'rho': list of float, value of rho at each outer iter
+        'lam': list of np.ndarray, multipliers at each outer iter
 
     Note: f and c are evaluated at every recorded step for plotting purposes,
     which uses extra budget. Caller should use `problem.nolimit()` to disable
