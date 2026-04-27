@@ -1,5 +1,5 @@
 import numpy as np
-from bfgs import bfgs_helper, _polish_inward
+from project2_py.bfgs import bfgs_helper, _polish_inward
 
 def algo_1(f, g, c, x0, n, count, prob):
     """
