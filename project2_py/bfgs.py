@@ -4,13 +4,13 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad, s
     """
     BFGS (Algorithm 6.6 from textbook) with Armijo backtracking. 
     We used this algorithm in Project 1 but it has some modifications:
-    - respects local sub-budget `max_evals` AND the global `n`
-    - returns the FINAL iterate, not the lowest-f_local iterate (outer AL
-    tracks best feasible point itself; f_local is the AL whose minimum
+    - respects the max_evals budget AND the global n
+    - returns the FINAL iterate, not the lowest f_local iterate (outer AL
+    tracks best feasible point itself, and f_local is the AL whose minimum
     is generally NOT the best feasible point of the original problem)
-    - computes real f(x0) instead of f_val=inf, since the latter auto-accepts
-    any first step including overshoots that BFGS can't recover from
-    (matters on Rosenbrock-like surfaces).
+    - computes real f(x0) instead of f_val=inf, since f_val=inf auto-accepts
+    any first step (including overshoots) that BFGS can't recover from
+    (this matters on Rosenbrock-like surfaces/for simple2).
     """
     m = len(x0)
     x = x0.copy()
@@ -20,9 +20,10 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad, s
         return x
     grad = g_local(x)
  
-    #Real f(x0): without it, Armijo with f_val=inf auto-accepts any first
-    #step including ones that worsen f. On Rosenbrock from x0=(0.1,0.43) this
-    #locks BFGS into a bad iterate it can't escape from.
+    #The real value of f(x0) is defined below. Without it, Armijo with 
+    #f_val=inf will accept any first step, including ones that worsen f. 
+    #On Rosenbrock from x0=(0.1,0.43) this locks BFGS into a bad iterate 
+    #it can't get out of.
     if count() + 2 > n:
         return x
     f_val = f_local(x)
@@ -45,11 +46,11 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad, s
             Q = np.eye(m)
             d = -grad
  
-        #Cap initial step so ||alpha*d|| <= 1; prevents huge first steps when
+        #Cap initial step so ||alpha*d|| <= 1. This prevents huge first steps when
         #the gradient is large (matters for Rosenbrock and for AL once rho is big).
         d_norm = np.linalg.norm(d)
         alpha = min(1.0, 1.0 / d_norm) if d_norm > 1e-12 else 1.0
-        directional_deriv = grad @ d  # negative since d is descent
+        directional_deriv = grad @ d  #negative since d is descent
  
         x_new = x
         f_new = f_val
@@ -65,7 +66,7 @@ def bfgs_helper(f_local, g_local, x0, n, count, max_evals, eval_cost_per_grad, s
             alpha *= rho_ls
  
         if not accepted:
-            #If we've already retried with Q=I and still can't make progress, stop.
+            #If we've already retried with Q=I and still can't make progress, then stop.
             if np.allclose(Q, np.eye(m)):
                 break
             Q = np.eye(m)
@@ -131,9 +132,9 @@ def _polish_inward(x_in, c, count, n, m, fd_h, polish_band, polish_target, max_i
         if d_norm < 1e-12:
             return x
  
-        #Linearization step: c_new ~= c + (grad c).step. Step in direction
-        #-J_active_sum to reduce active constraints. Length sized to drive
-        #current viol from +viol to -polish_target, with 2x safety factor.
+        #Linearization step, i.e. c_new = c + (grad c)*step. Step in direction
+        #-J_active_sum to REDUCE active constraints. I tried to size the length in order
+        #to drive current viol from +viol to -polish_target with a factor of 2 for safety.
         step_len = 2.0 * (viol + polish_target) / d_norm
         x = x - step_len * J_active_sum / d_norm
     return x
