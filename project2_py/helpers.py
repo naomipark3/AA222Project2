@@ -237,4 +237,3 @@ def test_optimize(optimize, tests_to_run, n_trials):
 
     return
     
-
